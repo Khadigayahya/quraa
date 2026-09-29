@@ -79,7 +79,10 @@ $("#q-input").addEventListener("submit", async ev => {
     out.innerHTML = engine.toHtml(r);
   } catch (e) {
     console.error(e);
-    showError(e && e.message ? e.message : String(e));
+    const m = e && e.message ? e.message : String(e);
+    showError(/network|fetch|Failed to fetch|Load failed/i.test(m)
+      ? "النت فصل وإحنا بنحمّل الموديلات 😕 دوس تاني — اللي اتحمّل خلاص مش هيتحمّل من الأول."
+      : m);
   } finally { status.stop(); go.disabled = false; }
 });
 

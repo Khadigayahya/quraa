@@ -22,18 +22,27 @@ function loadScript(src) {
   });
 }
 
-// fetch with progress + Cache API (so the 84 MB model downloads once per browser)
+// fetch with progress + Cache API (so the 84 MB model downloads once per browser).
+// Weak connections drop mid-download: retry up to 4 times, resuming with an HTTP Range request.
 async function fetchCached(url, onProgress) {
   let cache = null;
   try { cache = await caches.open(CACHE); const hit = await cache.match(url); if (hit) return await hit.arrayBuffer(); } catch (e) {}
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`تعذر تحميل ${url} (${res.status})`);
-  const total = +res.headers.get("content-length") || 0;
-  const reader = res.body.getReader(); const chunks = []; let got = 0;
-  for (;;) {
-    const { done, value } = await reader.read(); if (done) break;
-    chunks.push(value); got += value.length; onProgress && onProgress(got, total);
+  const chunks = []; let got = 0, total = 0, lastErr = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const res = await fetch(url, got ? { headers: { Range: `bytes=${got}-` } } : {});
+      if (got && res.status !== 206) { chunks.length = 0; got = 0; }          // server ignored Range: start over
+      if (!res.ok) throw new Error(`تعذر تحميل ${url.split("/").pop()} (${res.status})`);
+      if (!total) total = +(res.headers.get("content-range") || "").split("/")[1] || +res.headers.get("content-length") || 0;
+      const reader = res.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read(); if (done) break;
+        chunks.push(value); got += value.length; onProgress && onProgress(got, total);
+      }
+      if (!total || got >= total) { lastErr = null; break; }
+    } catch (e) { lastErr = e; await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
   }
+  if (lastErr) throw lastErr;
   const buf = new Uint8Array(got); let o = 0; for (const c of chunks) { buf.set(c, o); o += c.length; }
   try { cache && await cache.put(url, new Response(buf, { headers: { "content-type": "application/octet-stream" } })); } catch (e) {}
   return buf.buffer;
@@ -235,14 +244,20 @@ export async function loadWhisper(onProgress) {
   return _asr;
 }
 
+function looping(text) {                         // == content._looping
+  const w = normalize(text), c = new Map(); let mx = 0;
+  for (let i = 0; i + 3 <= w.length; i++) { const k = w.slice(i, i + 3).join(" "); const v = (c.get(k) || 0) + 1; c.set(k, v); if (v > mx) mx = v; }
+  return mx >= 4;
+}
+
 async function classifyChunk(w) {
   const r = await _asr(w, { language: "arabic", task: "transcribe" });
   const text = (r.text || "").trim(), sc = await quranScore(text);
   sc.wps = sc.words / Math.max(w.length / SR, 1);
   let label = "speech";
-  if (sc.words < 5) label = "unclear";
+  if (sc.words < 5 || looping(text)) label = "unclear";      // too short, or Whisper stuck repeating itself
   else if (sc.trigram >= 0.3) label = "quran";
-  else if (sc.bigram >= 0.25 && sc.wps < 1.0) label = "quran";
+  else if (sc.bigram >= 0.1 && sc.wps < 1.0) label = "quran";
   else if (sc.bigram >= 0.05 && sc.wps < 0.8) label = "quran";      // tarteel pace; small Whisper garbles words
   return { label, text, ...sc };
 }

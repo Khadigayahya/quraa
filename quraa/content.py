@@ -10,6 +10,15 @@ from . import quran_text
 from .audio import SR
 
 
+def _looping(text: str) -> bool:
+    """Small Whisper models sometimes get stuck ("الجنة ولمين الجنة ولمين ..."): the word rate is then
+    meaningless, so such a chunk should not vote for either side."""
+    from collections import Counter
+    w = quran_text.normalize(text)
+    tri = Counter(" ".join(w[i:i + 3]) for i in range(len(w) - 2))
+    return bool(tri) and max(tri.values()) >= 4
+
+
 class ContentDetector:
     def __init__(self, model_size: str | None = None, device: str | None = None,
                  quran_threshold: float = 0.3, min_words: int = 5):
@@ -33,11 +42,11 @@ class ContentDetector:
         text = self.transcribe(w)
         sc = quran_text.quran_score(text)
         sc["wps"] = sc["words"] / max(len(w) / SR, 1.0)   # recitation is slow (~0.5-1 w/s), talk ~1.5-3 w/s
-        if sc["words"] < self.min_words:
-            label = "unclear"                       # silence, music, too short to judge
+        if sc["words"] < self.min_words or _looping(text):
+            label = "unclear"                       # silence/music/too short, or Whisper stuck repeating itself
         elif sc["trigram"] >= self.quran_threshold:
             label = "quran"
-        elif sc["bigram"] >= 0.25 and sc["wps"] < 1.0:
+        elif sc["bigram"] >= 0.1 and sc["wps"] < 1.0:
             label = "quran"                         # slow + partly matching = recitation Whisper misheard
         elif sc["bigram"] >= 0.05 and sc["wps"] < 0.8:
             label = "quran"                         # very slow (tarteel pace) — small Whisper models garble the words

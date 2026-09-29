@@ -12,9 +12,9 @@ short_description: مين القارئ ده؟ تعرّف على قارئ الق�
 
 # قُرّاء — مين القارئ ده؟
 
-ارفع فيديو أو مقطع صوتي أو حط رابط يوتيوب، والتطبيق يقولك:
+ارفع فيديو أو مقطع صوتي (أو سجّل من المايك)، والتطبيق يقولك:
 1. **ده قرآن ولا محاضرة؟** (Whisper + مطابقة مع نص المصحف — وكمان يقولك أنهي سورة)
-2. **مين القارئ؟** (بصمة صوت ECAPA-TDNN مقارنة ببصمات 38 قارئ)
+2. **مين القارئ؟** (بصمة صوت ECAPA-TDNN مقارنة ببصمات 199 قارئ)
 
 ## التشغيل على جهازك
 
@@ -27,23 +27,31 @@ python -m quraa <ملف-أو-رابط>  # من سطر الأوامر
 > **ويندوز:** لو ظهر `WinError 1114 ... c10.dll` نزّلي أحدث
 > [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
 
-## النشر: الموقع على Vercel + الموديلات على Modal
+## النشر: كله في المتصفح (Vercel + Hugging Face Hub)
 
 ```
-المتصفح ──► web/ (Vercel، موقع ثابت)  ──POST /analyze──►  modal_app.py (Modal: ECAPA + Whisper)
+المتصفح ──► web/ على Vercel (الموقع)                         ← مجاني
+        ──► huggingface.co/KhadijaYahya/quraa-models           ← ecapa.onnx + gallery (مجاني)
+        ──► onnx-community/whisper-base (transformers.js)      ← قرآن ولا محاضرة
+التحليل كله بيحصل على جهاز الزائر — مفيش سيرفر، والملفات مش بتترفع لأي حتة.
 ```
 
-1. **الـ API:** `modal deploy modal_app.py` ← بيطبع رابط زي `https://<workspace>--quraa-api-api-web.modal.run`
-   - CPU افتراضيًا (مجاني). GPU أسرع بكتير: `QURAA_GPU=T4 modal deploy modal_app.py` (محتاج كارت على Modal).
-   - يوتيوب بيمنع السيرفرات من غير cookies:
-     `modal secret create quraa-youtube QURAA_YTDLP_COOKIES_TXT="$(cat cookies.txt)"` وبعدين `QURAA_YT_SECRET=1 modal deploy modal_app.py`
-2. **الموقع:** حطي رابط الـ API في `web/config.js`، وعلى Vercel: Import الريبو ← **Root Directory = `web`** ← Deploy.
+- **الموقع:** على Vercel: Import الريبو ← **Root Directory = `web`** ← Deploy.
+- **تحديث البصمات** (بعد إضافة قراء):
+  ```bash
+  python build/make_gallery.py            # -> models/gallery_v2.npz
+  python build/export_web_gallery.py      # -> web/models/gallery.{bin,json}
+  HF_HUB_DISABLE_XET=1 hf upload KhadijaYahya/quraa-models web/models . --repo-type model
+  ```
+- **تحديث الموديل** (نادرًا): `python build/export_onnx.py --check ملف.mp3` (لازم cosine = 1.000000).
+- `modal_app.py`: نسخة سيرفر اختيارية (بتدعم روابط يوتيوب) لو اتوفر كارت على Modal.
 
 ## الملفات
 
 | | |
 |---|---|
-| `web/` | الموقع (HTML/CSS/JS) — بيتنشر على Vercel |
+| `web/` | الموقع (HTML/CSS/JS) — بيتنشر على Vercel؛ `web/engine.js` = نسخة المتصفح من `quraa/` |
+| `build/` | بناء البصمات (mp3quran على Modal)، وتصدير الموديل والقاعدة للمتصفح |
 | `modal_app.py` | الـ API على Modal |
 | `app.py` | واجهة Gradio (للتشغيل المحلي أو كولاب) |
 | `quraa/` | الكود: تحميل الصوت، البصمات، قرآن/محاضرة، أسماء القراء |
