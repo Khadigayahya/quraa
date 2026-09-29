@@ -39,6 +39,8 @@ class ContentDetector:
             label = "quran"
         elif sc["bigram"] >= 0.25 and sc["wps"] < 1.0:
             label = "quran"                         # slow + partly matching = recitation Whisper misheard
+        elif sc["bigram"] >= 0.05 and sc["wps"] < 0.8:
+            label = "quran"                         # very slow (tarteel pace) — small Whisper models garble the words
         else:
             label = "speech"
         return {"label": label, "text": text, **sc}

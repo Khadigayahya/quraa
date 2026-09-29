@@ -23,7 +23,7 @@
       <div class="q-logo">قُرّاء</div>
       <div class="q-tag">اسمع التلاوة… وإحنا نقولك مين القارئ</div>
       <div class="q-divider">۞</div>
-      <div class="q-stats"><span>🎙️ <b id="q-people">38</b> قارئ</span><span>🎬 يوتيوب وفيديو</span><span>🕋 قرآن ولا محاضرة؟</span></div>
+      <div class="q-stats"><span>🎙️ <b id="q-people">199</b> قارئ</span><span>🔒 بيشتغل على جهازك</span><span>🕋 قرآن ولا محاضرة؟</span></div>
     </header>
 
     <section class="q-grid">
@@ -34,20 +34,14 @@
         </div>
 
         <div class="q-pane" data-pane="video">
-          <p class="q-hint">رابط يوتيوب / فيسبوك… أو فيديو من جهازك</p>
-          <label class="q-label" for="q-url">الرابط</label>
-          <input id="q-url" class="q-field" type="url" dir="ltr" placeholder="https://www.youtube.com/watch?v=…">
-          <div class="q-examples"><span class="q-dim">جرّب:</span>
-            <button type="button" class="q-ex" data-url="https://www.youtube.com/watch?v=jYQZAFEBNTw">المنشاوي — الملك</button>
-            <button type="button" class="q-ex" data-url="https://www.youtube.com/watch?v=dFl2ia_8VUk">الحصري — يس</button>
-          </div>
-          <div class="q-or"><span>أو</span></div>
+          <p class="q-hint">ارفع فيديو التلاوة من جهازك</p>
           <label class="q-drop" data-for="video">
             <input type="file" accept="video/*,audio/*" hidden>
             <span class="q-drop-icon">⤒</span>
             <span class="q-drop-text">اسحب الفيديو هنا أو <u>اختار من جهازك</u></span>
             <span class="q-drop-file q-dim"></span>
           </label>
+          <p class="q-tip">💡 فيديو على يوتيوب؟ نزّله الأول وبعدين ارفعه هنا.</p>
           <label class="q-check"><input id="q-check" type="checkbox"> اتأكد الأول إنه تلاوة مش محاضرة</label>
         </div>
 
@@ -81,11 +75,11 @@
     </section>
 
     <footer class="q-foot">
-      التسجيلات المرجعية من everyayah.com والحقوق لأصحابها · التطبيق بيعرف القراء اللي في قاعدته بس
+      الملفات بتتحلل على جهازك ومش بتترفع لأي سيرفر · بصمات القراء من تسجيلات mp3quran.net و everyayah.com والحقوق لأصحابها
     </footer>
   </main>
 
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

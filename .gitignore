@@ -4,3 +4,6 @@ models/pretrained/
 *.ipynb_checkpoints
 reciter_baseline_colab*.ipynb
 build/emb/
+web/models/
+web/_t/
+web/_test.html
