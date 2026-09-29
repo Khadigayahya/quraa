@@ -17,14 +17,17 @@ def _norm(X):
 
 
 class Gallery:
-    def __init__(self, labels, centroids, proj_mean=None, proj_W=None, threshold=None, names=None, meta=None):
-        self.labels = list(labels)                         # one per centroid (folder label)
-        self.people = [reciters.person_of(l) for l in self.labels]
+    def __init__(self, labels, centroids, proj_mean=None, proj_W=None, threshold=None, names=None, meta=None,
+                 people=None, styles=None):
+        self.labels = list(labels)                         # one per centroid (recording set)
+        # person per centroid: given explicitly (mp3quran sets) or derived from everyayah folder names
+        self.people = list(people) if people is not None else [reciters.person_of(l) for l in self.labels]
         self.C = _norm(np.asarray(centroids, dtype=np.float32))
         self.proj_mean = proj_mean
         self.proj_W = proj_W
         self.threshold = threshold
         self.names = dict(names or {})                     # person id -> display name overrides
+        self.styles = dict(styles or {})                   # label -> recording style ("حفص عن عاصم - مرتل")
         self.meta = dict(meta or {})
         self.person_ids = sorted(set(self.people))
         self._pidx = np.array([self.person_ids.index(p) for p in self.people])
@@ -54,20 +57,29 @@ class Gallery:
         Z = g.transform(E)
         uniq = sorted(set(labels))
         C = np.stack([Z[labels == l].mean(0) for l in uniq])
+        if kw.get("people") is not None:                   # people given per row -> one per centroid
+            per = dict(zip(labels, kw["people"]))
+            kw["people"] = [per[l] for l in uniq]
         return cls(uniq, C, *(proj or (None, None)), **kw)
 
-    def enroll(self, label, E_raw, display_name=None):
+    def enroll(self, label, E_raw, display_name=None, person=None, style=None):
         """Add a new reciter (or recording set) from a few clean clips' raw embeddings."""
         c = self.transform(E_raw).mean(0, keepdims=True)
-        if label in self.labels:
-            self.C[self.labels.index(label)] = _norm(c)[0]
-            new = Gallery(self.labels, self.C, self.proj_mean, self.proj_W, self.threshold, self.names, self.meta)
+        person = person or (self.people[self.labels.index(label)] if label in self.labels else reciters.person_of(label))
+        labels, C, people = list(self.labels), self.C.copy(), list(self.people)
+        if label in labels:
+            C[labels.index(label)] = _norm(c)[0]
         else:
-            new = Gallery(self.labels + [label], np.vstack([self.C, c]), self.proj_mean, self.proj_W,
-                          self.threshold, self.names, self.meta)
+            labels.append(label); C = np.vstack([C, c]); people.append(person)
+        new = Gallery(labels, C, self.proj_mean, self.proj_W, self.threshold, self.names, self.meta, people, self.styles)
         if display_name:
-            new.names[reciters.person_of(label)] = display_name
+            new.names[person] = display_name
+        if style:
+            new.styles[label] = style
         return new
+
+    def style(self, label):
+        return self.styles.get(label) or reciters.STYLES_AR.get(reciters.style_of(label), "")
 
     # ---- scoring --------------------------------------------------------------------------
     def score_labels(self, E):
@@ -81,17 +93,20 @@ class Gallery:
         return P                                                         # [N, n_people]
 
     def name(self, pid, lang="ar"):
+        if lang != "ar":
+            return self.meta.get("names_en", {}).get(pid) or reciters.display_name(pid, lang)
         return self.names.get(pid) or reciters.display_name(pid, lang)
 
     # ---- io -------------------------------------------------------------------------------
     def save(self, path):
         path = Path(path)
-        arrays = {"C": self.C, "labels": np.array(self.labels)}
+        arrays = {"C": self.C, "labels": np.array(self.labels), "people": np.array(self.people)}
         if self.proj_W is not None:
             arrays.update(proj_mean=self.proj_mean, proj_W=self.proj_W)
         np.savez(path, **arrays)
         path.with_suffix(".json").write_text(json.dumps(
-            {"threshold": self.threshold, "names": self.names, "meta": self.meta}, ensure_ascii=False, indent=2),
+            {"threshold": self.threshold, "names": self.names, "styles": self.styles, "meta": self.meta},
+            ensure_ascii=False, indent=2),
             encoding="utf-8")
 
     @classmethod
@@ -106,4 +121,5 @@ class Gallery:
         return cls([str(l) for l in d["labels"]], d["C"],
                    d["proj_mean"] if "proj_mean" in d else None,
                    d["proj_W"] if "proj_W" in d else None,
-                   info.get("threshold"), info.get("names"), info.get("meta"))
+                   info.get("threshold"), info.get("names"), info.get("meta"),
+                   [str(p) for p in d["people"]] if "people" in d else None, info.get("styles"))

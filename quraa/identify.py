@@ -9,7 +9,9 @@ def identify(w: np.ndarray, embedder, gallery, spans=None, win_s: float = 6, hop
     """w: 16 kHz mono audio. spans: optional [(start_s, end_s)] to restrict to (e.g. Quran parts only).
 
     Decision = mean similarity over windows (robust), votes shown as a sanity check.
-    Below `threshold` (default: the one calibrated in the gallery) -> unknown reciter."""
+    Accepted if the similarity clears the gallery threshold OR the winner is clearly ahead of the
+    runner-up (margin): real-world recordings score lower than studio ones, but a known reciter
+    still stands out, while an unknown voice sits close to several people (see build/make_gallery.py)."""
     if max_windows is None:
         max_windows = 80 if embedder.device.startswith("cuda") else 40
     if spans:
@@ -27,6 +29,7 @@ def identify(w: np.ndarray, embedder, gallery, spans=None, win_s: float = 6, hop
     best = order[0]
     thr = gallery.threshold if threshold is None else threshold
     margin = float(mean[best] - mean[order[1]]) if len(order) > 1 else 1.0
+    margin_thr = gallery.meta.get("margin_threshold", 0.10)
 
     # which recording set (style) of the winner matched best
     L = gallery.score_labels(E).mean(0)
@@ -39,11 +42,12 @@ def identify(w: np.ndarray, embedder, gallery, spans=None, win_s: float = 6, hop
         "name": gallery.name(gallery.person_ids[best], "ar"),
         "name_en": gallery.name(gallery.person_ids[best], "en"),
         "label": best_label,
+        "style": gallery.style(best_label),
         "similarity": float(mean[best]),
         "margin": margin,
         "votes": int(votes[best]),
         "n_windows": len(starts),
-        "unknown": bool(thr is not None and mean[best] < thr),
+        "unknown": bool(thr is not None and mean[best] < thr and margin < margin_thr),
         "threshold": thr,
         "top": [{"person": gallery.person_ids[i], "name": gallery.name(gallery.person_ids[i], "ar"),
                  "similarity": float(mean[i]), "votes": int(votes[i])} for i in order[:topn]],

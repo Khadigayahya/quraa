@@ -3,3 +3,4 @@ __pycache__/
 models/pretrained/
 *.ipynb_checkpoints
 reciter_baseline_colab*.ipynb
+build/emb/

@@ -90,9 +90,8 @@ class Api:
             if not src:
                 raise HTTPException(400, "ارفع ملف أو حط رابط")
             try:
-                r = self.q.analyze(src, check_content=check_content, max_minutes=MAX_MINUTES)
-                if tmp:
-                    r["source"] = file.filename
+                r = self.q.analyze(src, check_content=check_content, max_minutes=MAX_MINUTES,
+                                   display_name=file.filename if tmp else None)
                 return {"html": to_html(r), "result": r}
             except Exception as e:
                 raise HTTPException(422, f"{type(e).__name__}: {e}")

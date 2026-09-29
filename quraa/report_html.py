@@ -64,6 +64,23 @@ def _bars(rec):
     return f'<div class="q-panel"><div class="q-kicker">أقرب الأصوات</div>{"".join(rows)}</div>'
 
 
+def _hint_block(r, rec):
+    hints = r.get("title_hints") or []
+    voice = rec.get("person") if rec and rec.get("ok") and not rec.get("unknown") else None
+    if hints and voice and hints[0]["person"] == voice:
+        return '<div class="q-row q-center"><span class="q-chip q-chip-ok">✓ عنوان الفيديو كمان بيقول كده</span></div>'
+    if hints:
+        names = "، ".join(f"<b>{escape(h['name'])}</b>" for h in hints[:2])
+        return (f'<div class="q-panel q-hint-box"><div class="q-kicker">📝 عنوان الملف/الفيديو بيذكر</div>'
+                f'<div class="q-sub">{names}</div>'
+                '<div class="q-dim">ده من الاسم المكتوب مش من الصوت — لو الصوت قال حاجة تانية، صدّق الصوت أكتر لو التطابق عالي.</div></div>')
+    if rec and rec.get("ok") and rec.get("unknown") and r.get("source_text"):
+        return (f'<div class="q-panel q-hint-box"><div class="q-kicker">📝 عنوان الفيديو</div>'
+                f'<div class="q-sub">{escape(r["source_text"][:140])}</div>'
+                '<div class="q-dim">القارئ مش في قاعدتنا، بس العنوان ممكن يساعدك تعرفه.</div></div>')
+    return ""
+
+
 def to_html(r: dict) -> str:
     c = r.get("content")
     rec = r.get("reciter")
@@ -76,13 +93,13 @@ def to_html(r: dict) -> str:
         hero = f'<div class="q-hero q-hero-empty"><div class="q-ornament">۞</div><div class="q-sub">{msg}</div></div>'
         return f'<div class="q-card">{head}{hero}{_content_block(c, r["duration_s"])}</div>'
 
-    style = STYLE.get(style_of(rec["label"]), "")
+    style = rec.get("style") or STYLE.get(style_of(rec["label"]), "")
     pct = _pct(rec["similarity"])
     if not rec["unknown"]:
         kicker, note, tone = "القارئ", "", "q-hero-ok"
         if rec["margin"] < 0.03:
             note = "الفرق بينه وبين التاني صغير — النتيجة مش أكيدة."
-    elif rec["margin"] >= 0.08:
+    elif rec["margin"] >= 0.06:
         kicker, tone = "غالبًا القارئ", "q-hero-mid"
         note = "درجة التطابق أقل من العتبة، بس الصوت متميّز بوضوح — غالبًا فيه صدى أو ضجيج."
     else:
@@ -103,7 +120,8 @@ def to_html(r: dict) -> str:
       <div class="q-dim">درجة التطابق {rec['similarity']:.2f}{f" · العتبة {rec['threshold']:.2f}" if rec.get('threshold') else ''}</div>
       {f'<div class="q-note">{note}</div>' if note else ''}
     </div>"""
-    return f'<div class="q-card">{head}{hero}{_content_block(c, r["duration_s"])}{_bars(rec)}</div>'
+    return (f'<div class="q-card">{head}{hero}{_hint_block(r, rec)}{_content_block(c, r["duration_s"])}'
+            f'{_bars(rec)}</div>')
 
 
 def error_html(msg: str) -> str:

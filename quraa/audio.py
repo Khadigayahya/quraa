@@ -29,6 +29,10 @@ def is_url(s: str) -> bool:
 
 
 def download(url: str, out_dir: str | None = None) -> str:
+    return download_with_info(url, out_dir)[0]
+
+
+def download_with_info(url: str, out_dir: str | None = None) -> tuple[str, dict]:
     """Download the best audio stream of a YouTube / social-media link with yt-dlp.
 
     If YouTube asks you to "sign in to confirm you're not a bot" (common on Colab and servers),
@@ -55,7 +59,7 @@ def download(url: str, out_dir: str | None = None) -> str:
         opts["cookiefile"] = os.environ["QURAA_YTDLP_COOKIES"]
     with yt_dlp.YoutubeDL(opts) as ydl:
         info = ydl.extract_info(url.strip(), download=True)
-        return ydl.prepare_filename(info)
+        return ydl.prepare_filename(info), {k: info.get(k) for k in ("title", "uploader", "channel", "webpage_url")}
 
 
 def load(path: str, max_minutes: float | None = None, start_s: float = 0) -> np.ndarray:
@@ -78,10 +82,19 @@ def load(path: str, max_minutes: float | None = None, start_s: float = 0) -> np.
 
 def fetch(source: str, max_minutes: float | None = None) -> tuple[np.ndarray, str]:
     """source = local path or URL -> (waveform, human-readable name)."""
+    w, name, _ = fetch_info(source, max_minutes)
+    return w, name
+
+
+def fetch_info(source: str, max_minutes: float | None = None, display_name: str | None = None):
+    """Like fetch, plus a text describing the source (video title + channel, or file name) for hints."""
     if is_url(source):
-        path = download(source)
-        return load(path, max_minutes), Path(path).name
-    return load(source, max_minutes), Path(source).name
+        path, info = download_with_info(source)
+        title = info.get("title") or Path(path).name
+        text = " ".join(filter(None, [info.get("title"), info.get("uploader") or info.get("channel")]))
+        return load(path, max_minutes), title, text
+    name = display_name or Path(source).name
+    return load(source, max_minutes), name, Path(name).stem.replace("_", " ")
 
 
 def windows(w: np.ndarray, win_s: float = 6, hop_s: float = 3, max_windows: int | None = 80,

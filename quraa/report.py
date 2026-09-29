@@ -34,8 +34,8 @@ def to_markdown(r: dict) -> str:
         lines.append(f"\n⚠️ {rec['reason']}")
         return "\n".join(lines)
 
-    style = STYLE.get(style_of(rec["label"]), "")
-    if rec["unknown"] and rec["margin"] >= 0.08:
+    style = rec.get("style") or STYLE.get(style_of(rec["label"]), "")
+    if rec["unknown"] and rec["margin"] >= 0.06:
         lines.append(f"\n## 🎙️ غالبًا: **{rec['name']}** (ثقة منخفضة)")
         lines.append(f"التشابه {rec['similarity']:.2f} أقل من العتبة {rec['threshold']:.2f}، بس متميّز بوضوح "
                      f"عن التاني (فرق {rec['margin']:.2f}) — غالبًا التسجيل فيه صدى أو ضجيج.")

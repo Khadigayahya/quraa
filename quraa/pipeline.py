@@ -13,7 +13,7 @@ MODELS = Path(os.environ.get("QURAA_MODELS", ROOT / "models"))
 
 
 def default_gallery_path():
-    for name in ("gallery_v1.npz", "gallery_ecapa_v0.npz"):
+    for name in ("gallery_v2.npz", "gallery_v1.npz", "gallery_ecapa_v0.npz"):
         if (MODELS / name).exists():
             return MODELS / name
     raise FileNotFoundError(f"No gallery found in {MODELS}. Run the v1 notebook or copy gallery_ecapa_v0.npz there.")
@@ -43,10 +43,14 @@ class Quraa:
                 self._content = ContentDetector(self.whisper_size, self.device)
         return self._content
 
-    def analyze(self, source: str, check_content: bool = True, max_minutes: float | None = 60) -> dict:
+    def analyze(self, source: str, check_content: bool = True, max_minutes: float | None = 60,
+                display_name: str | None = None) -> dict:
+        from .hints import title_matches
+
         t0 = time.time()
-        w, name = audio.fetch(source, max_minutes)
-        out = {"source": name, "duration_s": len(w) / audio.SR}
+        w, name, text = audio.fetch_info(source, max_minutes, display_name)
+        out = {"source": name, "duration_s": len(w) / audio.SR, "source_text": text,
+               "title_hints": title_matches(text, self.gallery)}
         spans = None
         if check_content:
             c = self.content.analyze(w)

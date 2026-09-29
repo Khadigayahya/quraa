@@ -126,6 +126,9 @@ footer { display: none !important; }
 .q-bar-top .q-bar-fill { background: linear-gradient(90deg, var(--q-gold), var(--q-emerald)); }
 .q-bar-top .q-bar-name { font-weight: 700; color: var(--q-emerald); }
 .q-bar-val { color: var(--q-soft); font-size: 13px; text-align: left; direction: ltr; }
+.q-chip-ok { border-color: var(--q-quran); color: var(--q-quran); }
+.q-hint-box { text-align: center; }
+.q-hint-box .q-sub b { color: var(--q-ink); font-family: 'Amiri', serif; font-size: 24px; }
 @media (max-width: 640px) {
   #q-header .q-logo { font-size: 58px; } .q-name { font-size: 36px; }
   .q-bar { grid-template-columns: 100px 1fr 38px; }
