@@ -1,0 +1,11 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchaudio
+speechbrain>=1.0
+faster-whisper>=1.1
+yt-dlp
+numpy
+scipy
+scikit-learn
+soundfile
+imageio-ffmpeg

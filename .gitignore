@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+models/pretrained/
+*.ipynb_checkpoints
+reciter_baseline_colab*.ipynb

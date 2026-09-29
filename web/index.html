@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>قُرّاء — مين القارئ ده؟</title>
+  <meta name="description" content="ارفع تلاوة أو حط رابط يوتيوب، ونقولك مين القارئ — ونفرّق كمان بين التلاوة والمحاضرة.">
+  <meta property="og:title" content="قُرّاء — مين القارئ ده؟">
+  <meta property="og:description" content="ارفع تلاوة أو حط رابط يوتيوب، ونقولك مين القارئ.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='16' fill='%230c4a3b'/><text x='32' y='44' font-size='34' text-anchor='middle' fill='%23ecd08a'>۞</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    try { const t = localStorage.getItem('q-theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+</head>
+<body>
+  <main class="q-wrap">
+    <header id="q-header">
+      <button id="q-theme" class="q-theme" type="button" aria-label="تغيير الوضع">◐</button>
+      <div class="q-logo">قُرّاء</div>
+      <div class="q-tag">اسمع التلاوة… وإحنا نقولك مين القارئ</div>
+      <div class="q-divider">۞</div>
+      <div class="q-stats"><span>🎙️ <b id="q-people">38</b> قارئ</span><span>🎬 يوتيوب وفيديو</span><span>🕋 قرآن ولا محاضرة؟</span></div>
+    </header>
+
+    <section class="q-grid">
+      <form id="q-input" class="q-panel-box" autocomplete="off">
+        <div class="q-tabs" role="tablist">
+          <button type="button" role="tab" class="q-tab" aria-selected="true" data-tab="video">🎬 فيديو أو رابط</button>
+          <button type="button" role="tab" class="q-tab" aria-selected="false" data-tab="audio">🎧 مقطع صوتي</button>
+        </div>
+
+        <div class="q-pane" data-pane="video">
+          <p class="q-hint">رابط يوتيوب / فيسبوك… أو فيديو من جهازك</p>
+          <label class="q-label" for="q-url">الرابط</label>
+          <input id="q-url" class="q-field" type="url" dir="ltr" placeholder="https://www.youtube.com/watch?v=…">
+          <div class="q-examples"><span class="q-dim">جرّب:</span>
+            <button type="button" class="q-ex" data-url="https://www.youtube.com/watch?v=jYQZAFEBNTw">المنشاوي — الملك</button>
+            <button type="button" class="q-ex" data-url="https://www.youtube.com/watch?v=dFl2ia_8VUk">الحصري — يس</button>
+          </div>
+          <div class="q-or"><span>أو</span></div>
+          <label class="q-drop" data-for="video">
+            <input type="file" accept="video/*,audio/*" hidden>
+            <span class="q-drop-icon">⤒</span>
+            <span class="q-drop-text">اسحب الفيديو هنا أو <u>اختار من جهازك</u></span>
+            <span class="q-drop-file q-dim"></span>
+          </label>
+          <label class="q-check"><input id="q-check" type="checkbox"> اتأكد الأول إنه تلاوة مش محاضرة</label>
+        </div>
+
+        <div class="q-pane" data-pane="audio" hidden>
+          <p class="q-hint">هنعرف الأول: <b>قرآن ولا محاضرة؟</b> ولو قرآن نقولك مين القارئ</p>
+          <label class="q-drop" data-for="audio">
+            <input type="file" accept="audio/*,video/*" hidden>
+            <span class="q-drop-icon">♫</span>
+            <span class="q-drop-text">اسحب المقطع الصوتي هنا أو <u>اختار من جهازك</u></span>
+            <span class="q-drop-file q-dim"></span>
+          </label>
+          <div class="q-or"><span>أو</span></div>
+          <button type="button" id="q-rec" class="q-rec"><span class="q-rec-dot"></span><span class="q-rec-label">سجّل من المايك</span><span class="q-rec-time"></span></button>
+          <audio id="q-rec-preview" controls hidden></audio>
+        </div>
+
+        <button type="submit" class="q-go" id="q-go">تعرّف على القارئ</button>
+      </form>
+
+      <div id="q-out" aria-live="polite">
+        <div class="q-card q-placeholder">
+          <div class="q-ornament">۞</div>
+          <div class="q-sub">النتيجة هتظهر هنا</div>
+          <div class="q-steps">
+            <div><b>١</b><span>حط رابط أو ارفع ملف</span></div>
+            <div><b>٢</b><span>بنسمع ونفرّق التلاوة عن الكلام</span></div>
+            <div><b>٣</b><span>نقارن الصوت ببصمات القراء</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="q-foot">
+      التسجيلات المرجعية من everyayah.com والحقوق لأصحابها · التطبيق بيعرف القراء اللي في قاعدته بس
+    </footer>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
