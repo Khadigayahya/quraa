@@ -199,7 +199,8 @@
     "ea_parhizgar": "شهريار پرهيزگار",
     "ea_alili": "عزيز عليلي",
     "ea_banna": "محمود علي البنا",
-    "ea_yassin_jazaery": "ياسين الجزائري"
+    "ea_yassin_jazaery": "ياسين الجزائري",
+    "yt_othman_haddad": "عثمان الحداد"
   },
   "styles": {
     "mp3q/100/100": "حفص عن عاصم - مرتل",
@@ -412,10 +413,11 @@
     "mp3q/96/96": "حفص عن عاصم - مرتل",
     "mp3q/97/97": "حفص عن عاصم - مرتل",
     "mp3q/98/284": "حفص عن عاصم - مرتل",
-    "mp3q/9/9": "حفص عن عاصم - مرتل"
+    "mp3q/9/9": "حفص عن عاصم - مرتل",
+    "yt/othman_haddad": "حفص عن عاصم - مرتل"
   },
   "meta": {
-    "source": "v2",
+    "source": "v2.2-1620d62c",
     "method": "C",
     "margin_threshold": 0.1,
     "names_en": {
@@ -617,15 +619,24 @@
       "ea_parhizgar": "Shahriar Parhizgar",
       "ea_alili": "Aziz Alili",
       "ea_banna": "Mahmoud Ali Al-Banna",
-      "ea_yassin_jazaery": "Yassin Al-Jazaery"
+      "ea_yassin_jazaery": "Yassin Al-Jazaery",
+      "yt_othman_haddad": "Othman Al-Haddad"
     },
-    "people": 199,
-    "recordings": 260,
+    "people": 200,
+    "recordings": 261,
     "closed_set_top1": 0.995,
     "open_set": {
       "threshold": 0.40392117500305175,
       "known_accepted": 0.9808917197452229,
       "unknown_rejected": 0.975609756097561
-    }
+    },
+    "added": [
+      {
+        "person": "yt_othman_haddad",
+        "name": "عثمان الحداد",
+        "source": "YouTube: تلاوات قراء الكويت (Al-Anbiya, Al-Mu'minun, Al-Waqi'ah; 4 min each)",
+        "check": "3 recordings consistent 0.86-0.92; leave-one-out margin 0.22-0.27"
+      }
+    ]
   }
 }
