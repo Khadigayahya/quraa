@@ -15,10 +15,11 @@ function saveQueue(q) { try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q.s
 
 async function post(row) {
   if (!CFG.SUPABASE_URL || !CFG.SUPABASE_KEY) return false;
+  // new-style keys (sb_publishable_…) go in `apikey` only; legacy anon JWTs also as a Bearer token
+  const headers = { apikey: CFG.SUPABASE_KEY, "Content-Type": "application/json", Prefer: "return=minimal" };
+  if (!CFG.SUPABASE_KEY.startsWith("sb_")) headers.Authorization = `Bearer ${CFG.SUPABASE_KEY}`;
   const res = await fetch(`${CFG.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/feedback`, {
-    method: "POST",
-    headers: { apikey: CFG.SUPABASE_KEY, Authorization: `Bearer ${CFG.SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify(row),
+    method: "POST", headers, body: JSON.stringify(row),
   });
   return res.ok;
 }
