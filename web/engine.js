@@ -103,9 +103,10 @@ export async function loadEcapa(onProgress) {
 
 export async function loadGallery() {
   if (_gallery) return _gallery;
-  const [info, bin] = await Promise.all([
-    fetch(`${MODEL_BASE}/gallery.json`).then(r => r.json()),
-    fetchCached(`${MODEL_BASE}/gallery.bin`)]);
+  // gallery.json is small and always revalidated; its version keys the cached gallery.bin, so a new
+  // gallery on the Hub (e.g. after build/apply_feedback.py) reaches every browser on its next visit.
+  const info = await fetch(`${MODEL_BASE}/gallery.json`, { cache: "no-cache" }).then(r => r.json());
+  const bin = await fetchCached(`${MODEL_BASE}/gallery.bin?v=${encodeURIComponent(info.version || "")}`);
   const f = new Float32Array(bin), D = info.dim, K = info.proj_k || D;
   let o = 0;
   const mean = info.proj_k ? f.subarray(o, o += D) : null;
@@ -150,6 +151,24 @@ function scorePeople(g, z) {                    // best centroid per person
   return { P, lab };
 }
 
+// ---------------------------------------------------------------- learning from this user's corrections
+// Corrections are kept on the device (voiceprint numbers only, never audio) and act as extra reference
+// voiceprints right away. Shared learning happens later, after review (build/apply_feedback.py).
+const REFS_KEY = "quraa-user-refs-v1", MAX_REFS = 300;
+export function loadUserRefs() { try { const r = JSON.parse(localStorage.getItem(REFS_KEY) || "[]"); return Array.isArray(r) ? r : []; } catch (e) { return []; } }
+export function addUserRef(person, name, emb) {
+  const refs = loadUserRefs();
+  refs.push({ person, name, emb: Array.from(emb, x => +x.toFixed(5)), t: Date.now() });
+  try { localStorage.setItem(REFS_KEY, JSON.stringify(refs.slice(-MAX_REFS))); return true; } catch (e) { return false; }
+}
+export function clearUserRefs() { try { localStorage.removeItem(REFS_KEY); } catch (e) {} }
+export const userPersonId = name => "user:" + normalize(name).join("_");
+
+function meanEmbedding(E) {                      // raw (pre-LDA) mean voiceprint, L2-normalised
+  const m = new Float32Array(192); for (const e of E) for (let d = 0; d < 192; d++) m[d] += e[d];
+  let n = 0; for (const a of m) n += a * a; n = Math.sqrt(n) + 1e-9; return m.map(a => a / n);
+}
+
 export async function identify(wav, spans, onStep) {
   const g = await loadGallery(); await loadEcapa();
   let w = wav;
@@ -160,21 +179,43 @@ export async function identify(wav, spans, onStep) {
   const starts = windows(w);
   if (!starts.length) return { ok: false, reason: "مفيش صوت واضح (صمت أو المقطع قصير)" };
   const E = await embed(starts.map(s => window6(w, s)), onStep);
-  const nP = g.people.length, mean = new Float32Array(nP), votes = new Int32Array(nP), labMean = new Float32Array(g.n);
+
+  // gallery people + people this user taught us (existing ids reuse their slot, new names get one)
+  const people = [...g.people], names = [...g.names], namesEn = [...g.names_en];
+  const refs = loadUserRefs().map(r => {
+    let idx = people.indexOf(r.person);
+    if (idx < 0) { idx = people.length; people.push(r.person); names.push(r.name); namesEn.push(""); }
+    return { idx, z: transform(g, Float32Array.from(r.emb)) };
+  });
+  const nP = people.length, mean = new Float32Array(nP), votes = new Int32Array(nP), labMean = new Float32Array(g.n);
+  const refMean = new Float32Array(nP).fill(0), hasRef = new Uint8Array(nP);
+  refs.forEach(r => { hasRef[r.idx] = 1; });
   for (const e of E) {
-    const { P, lab } = scorePeople(g, transform(g, e));
-    let b = 0; for (let p = 0; p < nP; p++) { mean[p] += P[p] / E.length; if (P[p] > P[b]) b = p; }
+    const z = transform(g, e), { P: Pg, lab } = scorePeople(g, z);
+    const P = new Float32Array(nP).fill(-1); P.set(Pg);
+    const R = new Float32Array(nP).fill(-1);
+    for (const r of refs) { let s = 0; for (let k = 0; k < g.K; k++) s += z[k] * r.z[k]; if (s > R[r.idx]) R[r.idx] = s; }
+    let b = 0;
+    for (let p = 0; p < nP; p++) {
+      if (R[p] > P[p]) P[p] = R[p];
+      mean[p] += P[p] / E.length; if (hasRef[p]) refMean[p] += R[p] / E.length;
+      if (P[p] > P[b]) b = p;
+    }
     votes[b]++; for (let j = 0; j < g.n; j++) labMean[j] += lab[j] / E.length;
   }
   const order = [...mean.keys()].sort((a, b) => mean[b] - mean[a]), best = order[0];
   const margin = order.length > 1 ? mean[best] - mean[order[1]] : 1;
   let bestLab = -1; for (let j = 0; j < g.n; j++) if (g.person_index[j] === best && (bestLab < 0 || labMean[j] > labMean[bestLab])) bestLab = j;
   const thr = g.threshold;
+  const step = Math.max(1, Math.floor(E.length / 8));
   return {
-    ok: true, person: g.people[best], name: g.names[best], name_en: g.names_en[best], style: g.styles[bestLab] || "",
+    ok: true, person: people[best], name: names[best], name_en: namesEn[best], style: bestLab >= 0 ? g.styles[bestLab] || "" : "",
     similarity: mean[best], margin, votes: votes[best], n_windows: starts.length, threshold: thr,
     unknown: thr != null && mean[best] < thr && margin < g.margin_threshold,
-    top: order.slice(0, 5).map(i => ({ person: g.people[i], name: g.names[i], similarity: mean[i], votes: votes[i] })),
+    learned: !!hasRef[best] && refMean[best] >= mean[best] - 1e-6,           // decided by this user's own correction
+    top: order.slice(0, 5).map(i => ({ person: people[i], name: names[i], similarity: mean[i], votes: votes[i] })),
+    embedding: meanEmbedding(E),                                            // sent with feedback (numbers only)
+    window_embeddings: E.filter((_, i) => i % step === 0).slice(0, 8),
   };
 }
 
@@ -351,7 +392,7 @@ export function toHtml(r) {
   else { kicker = "أقرب صوت ليه"; tone = "q-hero-unk"; note = "غالبًا القارئ ده مش موجود في قاعدة البيانات لسه."; }
   const hero = `<div class="q-hero ${tone}"><div class="q-ornament">۞</div><div class="q-kicker">${kicker}</div>
     <div class="q-name">${esc(rec.name)}</div><div class="q-name-en">${esc(rec.name_en)}</div>
-    <div class="q-row q-center">${rec.style ? `<span class="q-chip q-chip-gold">${esc(rec.style)}</span>` : ""}<span class="q-chip">اتفاق ${rec.votes}/${rec.n_windows} مقطع</span></div>
+    <div class="q-row q-center">${rec.style ? `<span class="q-chip q-chip-gold">${esc(rec.style)}</span>` : ""}<span class="q-chip">اتفاق ${rec.votes}/${rec.n_windows} مقطع</span>${rec.learned ? `<span class="q-chip q-chip-ok">🧠 من تصحيحك قبل كده</span>` : ""}</div>
     <div class="q-meter"><span style="width:${pct(rec.similarity)}%"></span></div>
     <div class="q-dim">درجة التطابق ${rec.similarity.toFixed(2)}${rec.threshold ? ` · العتبة ${rec.threshold.toFixed(2)}` : ""}</div>
     ${note ? `<div class="q-note">${note}</div>` : ""}</div>`;
@@ -359,12 +400,21 @@ export function toHtml(r) {
 }
 
 // ---------------------------------------------------------------- full pipeline
+async function sha256(file) {                    // identifies the same file across feedback (dedupe), not its content
+  try {
+    const d = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+    return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) { return ""; }
+}
+
 export async function analyze(file, { checkContent = true, maxMinutes = 10, onStatus = () => {} } = {}) {
   const t0 = performance.now();
   onStatus("بنقرا الصوت من الملف…");
+  const file_hash = await sha256(file);
   const { wav, duration, analysed } = await decodeFile(file, maxMinutes);
   const g = await loadGallery();
-  const out = { source: file.name, duration_s: duration, analysed_s: analysed, title_hints: titleMatches(file.name.replace(/\.[^.]+$/, "").replace(/_/g, " "), g) };
+  const out = { source: file.name, duration_s: duration, analysed_s: analysed, file_hash, gallery_version: g.version,
+    title_hints: titleMatches(file.name.replace(/\.[^.]+$/, "").replace(/_/g, " "), g) };
   let spans = null;
   if (checkContent) {
     onStatus("بنجهّز Whisper (أول مرة بس بياخد وقت)…");

@@ -1,4 +1,5 @@
 import * as engine from "./engine.js";
+import * as feedback from "./feedback.js";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -71,12 +72,16 @@ $("#q-input").addEventListener("submit", async ev => {
   ev.preventDefault();
   const f = state.tab === "video" ? state.files.video : (state.files.audio || state.recording);
   if (!f) return showError(state.tab === "video" ? "ارفع فيديو الأول." : "ارفع مقطع صوتي أو سجّل من المايك الأول.");
-  const checkContent = state.tab === "audio" || $("#q-check").checked;
+  await run(f, state.tab === "audio" || $("#q-check").checked);
+});
+
+async function run(f, checkContent) {
   const go = $("#q-go"); go.disabled = true;
   const status = showLoading();
   try {
     const r = await engine.analyze(f, { checkContent, onStatus: status.set });
     out.innerHTML = engine.toHtml(r);
+    feedback.render(out.querySelector(".q-card") || out, r, { onRecheckAsQuran: () => run(f, false) });
   } catch (e) {
     console.error(e);
     const m = e && e.message ? e.message : String(e);
@@ -84,7 +89,7 @@ $("#q-input").addEventListener("submit", async ev => {
       ? "النت فصل وإحنا بنحمّل الموديلات 😕 دوس تاني — اللي اتحمّل خلاص مش هيتحمّل من الأول."
       : m);
   } finally { status.stop(); go.disabled = false; }
-});
+}
 
 function showLoading() {
   const s0 = Date.now();
@@ -115,3 +120,14 @@ function mmss(s) { s = Math.floor(s); return `${Math.floor(s / 60)}:${String(s %
 
 // show the real number of reciters, and warm the (small) gallery up
 engine.loadGallery().then(g => { $("#q-people").textContent = g.people.length; }).catch(() => {});
+
+// send any ratings that were saved while offline / before the database was set up
+feedback.flushQueue().catch(() => {});
+
+// let people undo what this browser learned from their corrections
+const reset = $("#q-reset");
+if (reset) {
+  reset.hidden = !engine.loadUserRefs().length;
+  reset.addEventListener("click", () => { engine.clearUserRefs(); reset.textContent = "اتمسح ✓"; reset.disabled = true; });
+  out.addEventListener("click", () => setTimeout(() => { if (!reset.disabled) reset.hidden = !engine.loadUserRefs().length; }, 300));
+}

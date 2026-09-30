@@ -144,3 +144,21 @@ button, input { font: inherit; color: inherit; }
 .q-tip { font-size: 14px; color: var(--q-soft); margin: 12px 0 0; text-align: center; }
 .q-progress { height: 6px; border-radius: 999px; background: var(--q-line); overflow: hidden; margin: 14px auto 0; max-width: 280px; }
 .q-progress span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--q-gold), var(--q-emerald)); transition: width .3s; margin-left: auto; }
+
+/* feedback */
+.q-fb { border-top: 1px dashed var(--q-line); margin-top: 16px; padding-top: 16px; text-align: center; }
+.q-fb-q { font-weight: 700; font-size: 17px; margin-bottom: 10px; }
+.q-fb-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.q-fb-btn { border: 1px solid var(--q-line); background: var(--q-card); border-radius: 999px; padding: 8px 18px; cursor: pointer; font-weight: 500; }
+.q-fb-btn:hover { border-color: var(--q-emerald); }
+.q-fb-btn:focus-visible { outline: 2px solid var(--q-emerald); outline-offset: 2px; }
+.q-fb-btn:disabled { opacity: .5; cursor: default; }
+.q-fb-yes { background: color-mix(in srgb, var(--q-emerald) 10%, var(--q-card)); border-color: var(--q-emerald); }
+.q-fb-no { border-color: var(--q-speech); }
+.q-fb-fix { display: grid; gap: 10px; max-width: 420px; margin: 0 auto; text-align: right; }
+.q-fb-fix label { font-weight: 700; color: var(--q-emerald); font-size: 14px; }
+.q-fb-note { font-size: 12.5px; color: var(--q-soft); margin-top: 10px; }
+.q-fb-done { font-size: 15.5px; line-height: 1.8; }
+.q-fb-sub { display: block; font-size: 13px; color: var(--q-soft); }
+.q-link { background: none; border: none; color: var(--q-soft); text-decoration: underline; cursor: pointer; font-size: 13px; padding: 4px; margin-bottom: 6px; }
+.q-link:focus-visible { outline: 2px solid var(--q-emerald); }

@@ -46,12 +46,29 @@ python -m quraa <ملف-أو-رابط>  # من سطر الأوامر
 - **تحديث الموديل** (نادرًا): `python build/export_onnx.py --check ملف.mp3` (لازم cosine = 1.000000).
 - `modal_app.py`: نسخة سيرفر اختيارية (بتدعم روابط يوتيوب) لو اتوفر كارت على Modal.
 
+## تقييم المستخدمين (👍 / 👎) وتحسين القاعدة منه
+
+1. **على الجهاز فورًا:** أي تصحيح بيتحفظ كبصمة (أرقام بس) في المتصفح، والمرة الجاية نفس الصوت بيتعرف صح.
+2. **للكل بعد مراجعة:** التقييمات بتتبعت لجدول على Supabase (مجاني من غير كارت):
+   - اعمل مشروع على supabase.com ← SQL Editor ← شغّل `build/feedback_schema.sql`.
+   - حط `Project URL` و `anon public key` في `web/config.js` (المفتاح ده معمول يبقى عام: الجدول بيقبل إضافة بس).
+3. **تطبيق التقييمات** (دوريًا، مثلًا كل أسبوع):
+   ```bash
+   SUPABASE_URL=... SUPABASE_SERVICE_KEY=... python build/apply_feedback.py   # service key: متحطهوش في الكود أبدًا
+   # الأسماء الجديدة بتظهر في build/feedback_review.json — غيّر "approve" لـ true بعد المراجعة وشغّل تاني
+   python build/export_web_gallery.py --gallery models/gallery_v3.npz
+   HF_HUB_DISABLE_XET=1 hf upload KhadijaYahya/quraa-models web/models . --repo-type model
+   ```
+   السكريبت بيرفض التقييمات اللي الصوت فيها بعيد جدًا عن القارئ، وبيوقف أي تقييم بيعارض نتيجة واثقة إلا لو 3 ملفات مختلفة اتفقت،
+   وبيقيس قبل/بعد على تقييمات متسابة للاختبار وعلى سور mp3quran، ومش بيحفظ لو الدقة نزلت.
+
 ## الملفات
 
 | | |
 |---|---|
 | `web/` | الموقع (HTML/CSS/JS) — بيتنشر على Vercel؛ `web/engine.js` = نسخة المتصفح من `quraa/` |
-| `build/` | بناء البصمات (mp3quran على Modal)، وتصدير الموديل والقاعدة للمتصفح |
+| `build/` | بناء البصمات (mp3quran على Modal)، وتصدير الموديل والقاعدة للمتصفح، وتطبيق تقييمات المستخدمين |
+| `web/feedback.js` | أزرار 👍/👎 والتصحيح، والإرسال لـ Supabase، والتعلم على الجهاز |
 | `modal_app.py` | الـ API على Modal |
 | `app.py` | واجهة Gradio (للتشغيل المحلي أو كولاب) |
 | `quraa/` | الكود: تحميل الصوت، البصمات، قرآن/محاضرة، أسماء القراء |

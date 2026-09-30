@@ -4,4 +4,8 @@ window.QURAA = {
     ? "models"
     : "https://huggingface.co/KhadijaYahya/quraa-models/resolve/main",
   WHISPER: "onnx-community/whisper-base",
+  // Shared feedback database (Supabase, free). Leave empty to keep ratings in the browser only.
+  // The anon key is meant to be public: the table only allows inserts (build/feedback_schema.sql).
+  SUPABASE_URL: "",
+  SUPABASE_KEY: "",
 };

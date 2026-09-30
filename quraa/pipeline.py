@@ -13,7 +13,7 @@ MODELS = Path(os.environ.get("QURAA_MODELS", ROOT / "models"))
 
 
 def default_gallery_path():
-    for name in ("gallery_v2.npz", "gallery_v1.npz", "gallery_ecapa_v0.npz"):
+    for name in ("gallery_v3.npz", "gallery_v2.npz", "gallery_v1.npz", "gallery_ecapa_v0.npz"):
         if (MODELS / name).exists():
             return MODELS / name
     raise FileNotFoundError(f"No gallery found in {MODELS}. Run the v1 notebook or copy gallery_ecapa_v0.npz there.")
