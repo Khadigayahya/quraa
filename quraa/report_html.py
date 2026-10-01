@@ -97,7 +97,11 @@ def to_html(r: dict) -> str:
     pct = _pct(rec["similarity"])
     if not rec["unknown"]:
         kicker, note, tone = "القارئ", "", "q-hero-ok"
-        if rec["margin"] < 0.03:
+        if rec.get("sounds_like"):
+            kicker = "غالبًا القارئ"
+            note = (f"صوته قريب جدًا من {escape('، '.join(rec['sounds_like']))} — لو تعرف القارئ، "
+                    "قولنا الإجابة صح ولا غلط.")
+        elif rec["margin"] < 0.03:
             note = "الفرق بينه وبين التاني صغير — النتيجة مش أكيدة."
     elif rec["margin"] >= 0.06:
         kicker, tone = "غالبًا القارئ", "q-hero-mid"

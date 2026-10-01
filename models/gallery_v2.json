@@ -194,7 +194,6 @@
     "ea_abdulkareem": "محمد عبد الكريم",
     "ea_ayyoub": "محمد أيوب",
     "ea_jibreel": "محمد جبريل",
-    "ea_muhsin_qasim": "محسن القاسم",
     "ea_mustafa_ismail": "مصطفى إسماعيل",
     "ea_parhizgar": "شهريار پرهيزگار",
     "ea_alili": "عزيز عليلي",
@@ -417,7 +416,7 @@
     "yt/othman_haddad": "حفص عن عاصم - مرتل"
   },
   "meta": {
-    "source": "v2.2-1620d62c",
+    "source": "v2.3-7eb1c82e",
     "method": "C",
     "margin_threshold": 0.1,
     "names_en": {
@@ -614,7 +613,6 @@
       "ea_abdulkareem": "Muhammad Abdul Kareem",
       "ea_ayyoub": "Muhammad Ayyoub",
       "ea_jibreel": "Muhammad Jibreel",
-      "ea_muhsin_qasim": "Muhsin Al-Qasim",
       "ea_mustafa_ismail": "Mustafa Ismail",
       "ea_parhizgar": "Shahriar Parhizgar",
       "ea_alili": "Aziz Alili",
@@ -622,7 +620,7 @@
       "ea_yassin_jazaery": "Yassin Al-Jazaery",
       "yt_othman_haddad": "Othman Al-Haddad"
     },
-    "people": 200,
+    "people": 199,
     "recordings": 261,
     "closed_set_top1": 0.995,
     "open_set": {

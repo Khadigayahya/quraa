@@ -92,6 +92,20 @@ class Gallery:
             P[:, p] = np.maximum(P[:, p], S[:, j])
         return P                                                         # [N, n_people]
 
+    def neighbours(self, min_sim=0.60):
+        """person -> other people whose voiceprints are this close (about the closest 1-2% of all pairs).
+        Used to warn "sounds very much like …" instead of stating one name with false certainty."""
+        if getattr(self, "_nb", None) is not None and self._nb[0] == min_sim:
+            return self._nb[1]
+        S = self.C @ self.C.T
+        out = {}
+        for i, a in enumerate(self.people):
+            for j, b in enumerate(self.people):
+                if a != b and S[i, j] >= min_sim:
+                    out.setdefault(a, set()).add(b)
+        self._nb = (min_sim, out)
+        return out
+
     def name(self, pid, lang="ar"):
         if lang != "ar":
             return self.meta.get("names_en", {}).get(pid) or reciters.display_name(pid, lang)

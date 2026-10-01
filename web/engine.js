@@ -53,16 +53,37 @@ export async function decodeFile(file, maxMinutes = 10) {
   if (file.size > 400 * 1048576) throw new Error("الملف كبير جدًا (أكتر من 400MB) — قصّ جزء منه وجرّب تاني.");
   const data = await file.arrayBuffer();
   const Ctx = window.AudioContext || window.webkitAudioContext;
-  const ctx = new Ctx();
-  let ab;
+  // Decode straight to 16 kHz: decodeAudioData resamples with a proper band-limited (sinc) filter.
+  // (Playing the buffer through an OfflineAudioContext instead uses linear interpolation, which aliases and
+  //  shifted voiceprint scores by >0.1 on 44.1/48 kHz files compared with the ffmpeg pipeline the gallery uses.)
+  let ctx, ab;
+  try { ctx = new Ctx({ sampleRate: SR }); } catch (e) { ctx = new Ctx(); }
   try { ab = await ctx.decodeAudioData(data); }
   catch (e) { throw new Error("المتصفح مقدرش يقرا الصوت من الملف ده — جرّب MP3 أو MP4 أو M4A."); }
   finally { ctx.close && ctx.close(); }
-  const dur = Math.min(ab.duration, maxMinutes * 60);
-  const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(dur * SR)), SR);   // downmix + resample to 16 kHz
-  const src = off.createBufferSource(); src.buffer = ab; src.connect(off.destination); src.start(0);
-  const out = await off.startRendering();
-  return { wav: out.getChannelData(0), duration: ab.duration, analysed: dur };
+  const n = Math.min(ab.length, Math.floor(maxMinutes * 60 * ab.sampleRate));
+  let wav = new Float32Array(n);
+  for (let c = 0; c < ab.numberOfChannels; c++) {                 // average channels, like ffmpeg -ac 1
+    const ch = ab.getChannelData(c); for (let i = 0; i < n; i++) wav[i] += ch[i] / ab.numberOfChannels;
+  }
+  if (ab.sampleRate !== SR) wav = resample(wav, ab.sampleRate, SR); // very old browsers ignore {sampleRate}
+  return { wav, duration: ab.duration, analysed: wav.length / SR };
+}
+
+// Windowed-sinc resampler (fallback only): band-limited like scipy.signal.resample_poly / ffmpeg.
+function resample(x, from, to) {
+  const ratio = to / from, cutoff = Math.min(1, ratio) * 0.95, half = 32, out = new Float32Array(Math.floor(x.length * ratio));
+  for (let i = 0; i < out.length; i++) {
+    const t = i / ratio, c = Math.floor(t); let acc = 0, norm = 0;
+    for (let k = c - half + 1; k <= c + half; k++) {
+      if (k < 0 || k >= x.length) continue;
+      const d = t - k, w = 0.5 + 0.5 * Math.cos(Math.PI * d / half);         // Hann window
+      const sinc = d === 0 ? cutoff : Math.sin(Math.PI * cutoff * d) / (Math.PI * d);
+      acc += x[k] * sinc * w; norm += sinc * w;
+    }
+    out[i] = norm ? acc / norm : 0;
+  }
+  return out;
 }
 
 function rms(w, s, n) { let e = 0; for (let i = s; i < s + n; i++) e += w[i] * w[i]; return Math.sqrt(e / n); }
@@ -208,8 +229,11 @@ export async function identify(wav, spans, onStep) {
   let bestLab = -1; for (let j = 0; j < g.n; j++) if (g.person_index[j] === best && (bestLab < 0 || labMean[j] > labMean[bestLab])) bestLab = j;
   const thr = g.threshold;
   const step = Math.max(1, Math.floor(E.length / 8));
+  // == identify.py: a close-sounding reciter right behind the winner → say so
+  const nb = new Set(best < g.people.length && g.neighbours ? g.neighbours[best] : []);
+  const sounds_like = order.slice(1, 4).filter(i => nb.has(i) && mean[best] - mean[i] < 0.25).map(i => names[i]);
   return {
-    ok: true, person: people[best], name: names[best], name_en: namesEn[best], style: bestLab >= 0 ? g.styles[bestLab] || "" : "",
+    ok: true, sounds_like, person: people[best], name: names[best], name_en: namesEn[best], style: bestLab >= 0 ? g.styles[bestLab] || "" : "",
     similarity: mean[best], margin, votes: votes[best], n_windows: starts.length, threshold: thr,
     unknown: thr != null && mean[best] < thr && margin < g.margin_threshold,
     learned: !!hasRef[best] && refMean[best] >= mean[best] - 1e-6,           // decided by this user's own correction
@@ -387,7 +411,12 @@ export function toHtml(r) {
     return `<div class="q-card">${head}<div class="q-hero q-hero-empty"><div class="q-ornament">۞</div><div class="q-sub">${msg}</div></div>${contentBlock(c, r.analysed_s)}</div>`;
   }
   let kicker = "القارئ", note = "", tone = "q-hero-ok";
-  if (!rec.unknown) { if (rec.margin < 0.03) note = "الفرق بينه وبين التاني صغير — النتيجة مش أكيدة."; }
+  if (!rec.unknown) {
+    if (rec.sounds_like && rec.sounds_like.length) {
+      kicker = "غالبًا القارئ";
+      note = `صوته قريب جدًا من ${esc(rec.sounds_like.join("، "))} — لو تعرف القارئ، قولنا الإجابة صح ولا غلط.`;
+    } else if (rec.margin < 0.03) note = "الفرق بينه وبين التاني صغير — النتيجة مش أكيدة.";
+  }
   else if (rec.margin >= 0.06) { kicker = "غالبًا القارئ"; tone = "q-hero-mid"; note = "درجة التطابق أقل من العتبة، بس الصوت متميّز بوضوح — غالبًا فيه صدى أو ضجيج."; }
   else { kicker = "أقرب صوت ليه"; tone = "q-hero-unk"; note = "غالبًا القارئ ده مش موجود في قاعدة البيانات لسه."; }
   const hero = `<div class="q-hero ${tone}"><div class="q-ornament">۞</div><div class="q-kicker">${kicker}</div>

@@ -36,8 +36,14 @@ def identify(w: np.ndarray, embedder, gallery, spans=None, win_s: float = 6, hop
     idx = [j for j, p in enumerate(gallery.people) if p == gallery.person_ids[best]]
     best_label = gallery.labels[max(idx, key=lambda j: L[j])]
 
+    # a close-sounding reciter right behind the winner → say so instead of pretending to be sure
+    nb = gallery.neighbours().get(gallery.person_ids[best], set())
+    sounds_like = [gallery.name(gallery.person_ids[i]) for i in order[1:4]
+                   if gallery.person_ids[i] in nb and mean[best] - mean[i] < 0.25]
+
     return {
         "ok": True,
+        "sounds_like": sounds_like,
         "person": gallery.person_ids[best],
         "name": gallery.name(gallery.person_ids[best], "ar"),
         "name_en": gallery.name(gallery.person_ids[best], "en"),

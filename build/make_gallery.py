@@ -36,6 +36,10 @@ def same_person(a, b):
     return set(ta) <= set(tb) or set(tb) <= set(ta)
 
 
+# same person under two names (found by voiceprint similarity ≥ 0.85, confirmed by hand): drop → keep
+DUPLICATES = {"ea_muhsin_qasim": "mp3q_67"}       # محسن القاسم (everyayah) = عبدالمحسن القاسم (mp3quran)
+
+
 def load_mp3q(emb_dir):
     rows = []
     for f in sorted(Path(emb_dir).glob("*.npz")):
@@ -106,8 +110,8 @@ def main():
         hit = next((p for p, n in names.items() if same_person(ar, n)), None)
         if hit:
             merged[pid] = hit
-        ea_people.append(hit or f"ea_{pid}")
-        if not hit:
+        ea_people.append(hit or DUPLICATES.get(f"ea_{pid}", f"ea_{pid}"))
+        if not hit and f"ea_{pid}" not in DUPLICATES:
             names[f"ea_{pid}"] = ar
             names_en[f"ea_{pid}"] = reciters.display_name(pid, "en")
     print(f"everyayah: {len(set(base.people))} reciters, {len(merged)} matched to mp3quran by name:")
@@ -140,6 +144,17 @@ def main():
     _, _, nu, bu = evaluate(g, second, only=hidden)
     print(f"open-set ({len(hidden)} hidden reciters): threshold {thr:.3f} | known accepted {(bk >= thr).mean():.1%} "
           f"| unknown rejected {(bu < thr).mean():.1%} | top-1 known {t1k:.1%}")
+
+    # ---- same reciter under two names? (different spellings across sources) ----
+    g_chk = build(rows, method, extra=extra)
+    P = g_chk.person_ids
+    for i, a in enumerate(P):
+        Ca = g_chk.C[[k for k, q in enumerate(g_chk.people) if q == a]]
+        for b in P[i + 1:]:
+            sim = float((Ca @ g_chk.C[[k for k, q in enumerate(g_chk.people) if q == b]].T).max())
+            if sim >= 0.85:
+                print(f"  ⚠ possible duplicate: {names.get(a, a)} ↔ {names.get(b, b)} (voiceprint similarity {sim:.2f}) — "
+                      f"add it to DUPLICATES if it is the same person")
 
     # ---- final gallery: everything ----
     g = build(rows, method, extra=extra)

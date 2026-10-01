@@ -44,6 +44,7 @@ def main():
         "names": [g.name(p, "ar") for p in people],
         "names_en": [g.name(p, "en") for p in people],
         "styles": [g.style(l) for l in g.labels],
+        "neighbours": [sorted(people.index(q) for q in g.neighbours().get(p, ())) for p in people],
         "threshold": g.threshold,
         "margin_threshold": g.meta.get("margin_threshold", 0.10),
     }

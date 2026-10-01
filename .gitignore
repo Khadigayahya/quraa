@@ -9,3 +9,4 @@ web/_t/
 web/_test.html
 web/_uitest.html
 marketing/*.mp4
+build/eval_clips.json
